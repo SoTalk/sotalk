@@ -4,8 +4,16 @@
 *.dll
 *.so
 *.dylib
+
+# Build output directories
 bin/
 dist/
+build/
+
+# Go build binaries (project specific)
+/sotalk
+/api
+/sotalk-api
 
 # Test binary, built with `go test -c`
 *.test
