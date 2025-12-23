@@ -937,3 +937,35 @@ func (up *UserPreferences) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
+// PasskeyCredential is the GORM model for passkey_credentials table
+type PasskeyCredential struct {
+	ID              uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UserID          uuid.UUID  `gorm:"type:uuid;not null;index:idx_passkey_user_id"`
+	CredentialID    string     `gorm:"type:text;not null;uniqueIndex"`
+	PublicKey       []byte     `gorm:"type:bytea;not null"`
+	AttestationType string     `gorm:"type:text;default:'none'"`
+	AAGUID          []byte     `gorm:"type:bytea"`
+	SignCount       uint32     `gorm:"type:bigint;default:0"`
+	Transports      string     `gorm:"type:text[]"` // PostgreSQL array of strings
+	BackupEligible  bool       `gorm:"type:boolean;default:false"`
+	BackupState     bool       `gorm:"type:boolean;default:false"`
+	CreatedAt       time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+	LastUsedAt      *time.Time `gorm:"type:timestamp"`
+}
+
+// TableName specifies the table name for PasskeyCredential model
+func (PasskeyCredential) TableName() string {
+	return "passkey_credentials"
+}
+
+// BeforeCreate hook for PasskeyCredential
+func (p *PasskeyCredential) BeforeCreate(tx *gorm.DB) error {
+	if p.ID == uuid.Nil {
+		p.ID = uuid.New()
+	}
+	if p.CreatedAt.IsZero() {
+		p.CreatedAt = time.Now()
+	}
+	return nil
+}
+

@@ -23,6 +23,7 @@ import (
 	"github.com/yourusername/sotalk/internal/usecase/media"
 	"github.com/yourusername/sotalk/internal/usecase/message"
 	"github.com/yourusername/sotalk/internal/usecase/notification"
+	"github.com/yourusername/sotalk/internal/usecase/passkey"
 	"github.com/yourusername/sotalk/internal/usecase/payment"
 	"github.com/yourusername/sotalk/internal/usecase/privacy"
 	"github.com/yourusername/sotalk/internal/usecase/referral"
@@ -137,6 +138,7 @@ func main() {
 	contactRepo := postgres.NewContactRepository(db)       // Day 13
 	notificationRepo := postgres.NewNotificationRepository(db) // Notifications
 	referralRepo := postgres.NewReferralRepository(db)     // Referral system
+	passkeyRepo := postgres.NewPasskeyRepository(db)       // Passkey credentials
 
 	// Initialize JWT manager
 	jwtManager := middleware.NewJWTManager(
@@ -304,6 +306,18 @@ func main() {
 	notificationService := notification.NewService(notificationRepo)
 	logger.Info("✅ Notification service initialized")
 
+	// Initialize passkey service (WebAuthn)
+	passkeyService, err := passkey.NewService(
+		cfg.Server.Host, // RP ID (relying party ID)
+		fmt.Sprintf("http://localhost:%d", cfg.Server.Port), // RP Origin
+		userRepo,
+		passkeyRepo,
+	)
+	if err != nil {
+		logger.Fatal("Failed to initialize passkey service", zap.Error(err))
+	}
+	logger.Info("✅ Passkey service initialized")
+
 
 	// Initialize HTTP handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -319,13 +333,14 @@ func main() {
 	statusHandler := handler.NewStatusHandler(statusService)    // Day 13
 	contactHandler := handler.NewContactHandler(contactService) // Day 13
 	referralHandler := handler.NewReferralHandler(referralService)
+	passkeyHandler := handler.NewPasskeyHandler(passkeyService) // Passkey/WebAuthn handler
 	wsHandler := websocket.NewHandler(wsHub, messageService)    // WebSocket handler
 	logger.Info("✅ WebSocket handler initialized")
 
 	// Initialize HTTP router
-	router := httpDelivery.NewRouter(authHandler, userHandler, messageHandler, groupHandler, channelHandler, mediaHandler, walletHandler, paymentHandler, privacyHandler, notificationHandler, statusHandler, contactHandler, referralHandler, wsHandler, jwtManager)
+	router := httpDelivery.NewRouter(authHandler, userHandler, messageHandler, groupHandler, channelHandler, mediaHandler, walletHandler, paymentHandler, privacyHandler, notificationHandler, statusHandler, contactHandler, referralHandler, passkeyHandler, wsHandler, jwtManager)
 	ginEngine := router.Setup(cfg.Server.Environment)
-	logger.Info("✅ HTTP router configured with WebSocket routes")
+	logger.Info("✅ HTTP router configured with WebSocket and Passkey routes")
 
 	// Create HTTP server
 	serverAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

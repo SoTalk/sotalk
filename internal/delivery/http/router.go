@@ -28,12 +28,13 @@ type Router struct {
 	statusHandler       *handler.StatusHandler  // Day 13
 	contactHandler      *handler.ContactHandler // Day 13
 	referralHandler     *handler.ReferralHandler
-	wsHandler           *websocket.Handler // WebSocket handler (Day 4)
+	passkeyHandler      *handler.PasskeyHandler // Passkey/WebAuthn handler
+	wsHandler           *websocket.Handler      // WebSocket handler (Day 4)
 	jwtManager          *middleware.JWTManager
 }
 
 // NewRouter creates a new router instance
-func NewRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, messageHandler *handler.MessageHandler, groupHandler *handler.GroupHandler, channelHandler *handler.ChannelHandler, mediaHandler *handler.MediaHandler, walletHandler *handler.WalletHandler, paymentHandler *handler.PaymentHandler, privacyHandler *handler.PrivacyHandler, notificationHandler *handler.NotificationHandler, statusHandler *handler.StatusHandler, contactHandler *handler.ContactHandler, referralHandler *handler.ReferralHandler, wsHandler *websocket.Handler, jwtManager *middleware.JWTManager) *Router {
+func NewRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, messageHandler *handler.MessageHandler, groupHandler *handler.GroupHandler, channelHandler *handler.ChannelHandler, mediaHandler *handler.MediaHandler, walletHandler *handler.WalletHandler, paymentHandler *handler.PaymentHandler, privacyHandler *handler.PrivacyHandler, notificationHandler *handler.NotificationHandler, statusHandler *handler.StatusHandler, contactHandler *handler.ContactHandler, referralHandler *handler.ReferralHandler, passkeyHandler *handler.PasskeyHandler, wsHandler *websocket.Handler, jwtManager *middleware.JWTManager) *Router {
 	return &Router{
 		healthHandler:       handler.NewHealthHandler(),
 		authHandler:         authHandler,
@@ -49,6 +50,7 @@ func NewRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandle
 		statusHandler:       statusHandler,
 		contactHandler:      contactHandler,
 		referralHandler:     referralHandler,
+		passkeyHandler:      passkeyHandler,
 		wsHandler:           wsHandler,
 		jwtManager:          jwtManager,
 	}
@@ -292,6 +294,22 @@ func (r *Router) Setup(mode string) *gin.Engine {
 				// Notification settings
 				notifications.GET("/settings", r.notificationHandler.GetSettings)
 				notifications.PUT("/settings", r.notificationHandler.UpdateSettings)
+			}
+
+			// Passkey routes (WebAuthn)
+			passkeys := protected.Group("/passkey")
+			{
+				// Registration flow
+				passkeys.POST("/register/begin", r.passkeyHandler.RegisterBegin)
+				passkeys.POST("/register/finish", r.passkeyHandler.RegisterFinish)
+
+				// Authentication flow
+				passkeys.POST("/authenticate/begin", r.passkeyHandler.AuthenticateBegin)
+				passkeys.POST("/authenticate/finish", r.passkeyHandler.AuthenticateFinish)
+
+				// Management
+				passkeys.GET("", r.passkeyHandler.GetPasskeys)
+				passkeys.DELETE("/:credentialId", r.passkeyHandler.DeletePasskey)
 			}
 		}
 	}

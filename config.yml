@@ -1,9 +1,11 @@
 tunnel: your-tunnel-name
 credentials-file: /Users/cakra/.cloudflared/4a4b8330-5d1b-447f-886a-bf949599314d.json
-
+#cloudflared tunnel --config config.yml run
 ingress:
   - hostname: dev.vyral.social
     service: http://localhost:5173
   - hostname: nyyu.vyral.social
+    service: http://localhost:8080
+  - hostname: api.billiongroup.net
     service: http://localhost:8080
   - service: http_status:404
